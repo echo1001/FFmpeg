@@ -88,6 +88,10 @@
  * encoders do.
  */
 #define FF_CODEC_CAP_EOF_FLUSH              (1 << 10)
+/**
+ * The decoder requires contiguous buffers.
+ */
+#define FF_CODEC_CAP_CONTIGUOUS_BUFFERS     (1 << 28)
 
 /**
  * FFCodec.codec_tags termination value
