@@ -997,6 +997,8 @@ DEFINE_QSV_FILTER(vpp, vpp, "VPP", FILTER_QUERY_FUNC(vpp_query_formats));
 static const AVOption qsvscale_options[] = {
     { "w",      "Output video width(0=input video width, -1=keep input video aspect)",  OFFSET(ow), AV_OPT_TYPE_STRING, { .str = "iw"   }, .flags = FLAGS },
     { "h",      "Output video height(0=input video height, -1=keep input video aspect)", OFFSET(oh), AV_OPT_TYPE_STRING, { .str = "ih"   }, .flags = FLAGS },
+    { "ocw",   "set the width crop area expression",   OFFSET(ocw), AV_OPT_TYPE_STRING, { .str = "w" }, 0, 0, FLAGS },
+    { "och",   "set the height crop area expression",  OFFSET(och), AV_OPT_TYPE_STRING, { .str = "h" }, 0, 0, FLAGS },
     { "format", "Output pixel format", OFFSET(output_format_str), AV_OPT_TYPE_STRING, { .str = "same" }, .flags = FLAGS },
 
 #if QSV_ONEVPL
