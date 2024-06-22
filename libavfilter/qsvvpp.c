@@ -801,8 +801,6 @@ int ff_qsvvpp_init(AVFilterContext *avctx, QSVVPPParam *param)
     if (param->crop_out_h > 0)    
         s->vpp_param.vpp.Out.CropH = param->crop_out_h;
 
-    printf("crop_out_w: %d, crop_out_h: %d\n", param->crop_out_w, param->crop_out_h);
-
     s->nb_seq_buffers = param->num_ext_buf;
 #if QSV_HAVE_OPAQUE
     if (IS_OPAQUE_MEMORY(s->in_mem_mode) || IS_OPAQUE_MEMORY(s->out_mem_mode))
