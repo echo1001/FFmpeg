@@ -203,6 +203,8 @@ static int qsv_stack_init(AVFilterContext *ctx)
     sctx->qsv_param.ext_buf[0] = (mfxExtBuffer *)&sctx->comp_conf;
     sctx->qsv_param.num_ext_buf = 1;
     sctx->qsv_param.num_crop = 0;
+    sctx->qsv_param.crop_out_w = 0;
+    sctx->qsv_param.crop_out_h = 0;
 
     return 0;
 }

@@ -93,6 +93,9 @@ typedef struct VPPContext{
     int crop_x;
     int crop_y;
 
+    int out_crop_w;
+    int out_crop_h;
+
     int transpose;
     int rotate;                 /* rotate angle : [0, 90, 180, 270] */
     int hflip;                  /* flip mode : 0 = off, 1 = HORIZONTAL flip */
@@ -109,6 +112,7 @@ typedef struct VPPContext{
     char *cx, *cy, *cw, *ch;
     char *ow, *oh;
     char *output_format_str;
+    char *ocw, *och;
 
     /** The color properties for output */
     char *color_primaries_str;
@@ -148,6 +152,7 @@ enum var_name {
     VAR_CH,
     VAR_CX,
     VAR_CY,
+    VAR_OCW, VAR_OCH,
     VAR_A, VAR_DAR,
     VAR_SAR,
     VAR_VARS_NB
@@ -175,6 +180,7 @@ static int eval_expr(AVFilterContext *ctx)
     AVExpr *w_expr  = NULL, *h_expr  = NULL;
     AVExpr *cw_expr = NULL, *ch_expr = NULL;
     AVExpr *cx_expr = NULL, *cy_expr = NULL;
+    AVExpr *ocw_expr = NULL, *och_expr = NULL;
     int     ret = 0;
 
     PASS_EXPR(cw_expr, vpp->cw);
@@ -185,6 +191,9 @@ static int eval_expr(AVFilterContext *ctx)
 
     PASS_EXPR(cx_expr, vpp->cx);
     PASS_EXPR(cy_expr, vpp->cy);
+
+    PASS_EXPR(ocw_expr, vpp->ocw);
+    PASS_EXPR(och_expr, vpp->och);
 
     var_values[VAR_IW] =
     var_values[VAR_IN_W] = ctx->inputs[0]->w;
@@ -222,6 +231,9 @@ static int eval_expr(AVFilterContext *ctx)
     /* calc again in case cx is relative to cy */
     CALC_EXPR(cx_expr, var_values[VAR_CX], vpp->crop_x, (var_values[VAR_IW] - var_values[VAR_OW]) / 2);
 
+    CALC_EXPR(ocw_expr, var_values[VAR_OCW], vpp->out_crop_w, var_values[VAR_OUT_W]);
+    CALC_EXPR(och_expr, var_values[VAR_OCH], vpp->out_crop_h, var_values[VAR_OUT_H]);
+
     if ((vpp->crop_w != var_values[VAR_IW]) || (vpp->crop_h != var_values[VAR_IH]))
         vpp->use_crop = 1;
 
@@ -232,6 +244,8 @@ release:
     av_expr_free(ch_expr);
     av_expr_free(cx_expr);
     av_expr_free(cy_expr);
+    av_expr_free(ocw_expr);
+    av_expr_free(och_expr);
 #undef PASS_EXPR
 #undef CALC_EXPR
 
@@ -574,6 +588,9 @@ static int config_output(AVFilterLink *outlink)
         param.crop     = &crop;
     }
 
+    param.crop_out_w = vpp->out_crop_w;
+    param.crop_out_h = vpp->out_crop_h;
+
 #define INIT_MFX_EXTBUF(extbuf, id) do { \
         memset(&vpp->extbuf, 0, sizeof(vpp->extbuf)); \
         vpp->extbuf.Header.BufferId = id; \
@@ -878,6 +895,10 @@ static const AVOption vpp_options[] = {
     { "width",  "Output video width(0=input video width, -1=keep input video aspect)",  OFFSET(ow), AV_OPT_TYPE_STRING, { .str="cw" }, 0, 255, .flags = FLAGS },
     { "h",      "Output video height(0=input video height, -1=keep input video aspect)", OFFSET(oh), AV_OPT_TYPE_STRING, { .str="w*ch/cw" }, 0, 255, .flags = FLAGS },
     { "height", "Output video height(0=input video height, -1=keep input video aspect)", OFFSET(oh), AV_OPT_TYPE_STRING, { .str="w*ch/cw" }, 0, 255, .flags = FLAGS },
+
+    { "ocw",   "set the width crop area expression",   OFFSET(ocw), AV_OPT_TYPE_STRING, { .str = "w" }, 0, 0, FLAGS },
+    { "och",   "set the height crop area expression",  OFFSET(och), AV_OPT_TYPE_STRING, { .str = "h" }, 0, 0, FLAGS },
+
     { "format", "Output pixel format", OFFSET(output_format_str), AV_OPT_TYPE_STRING, { .str = "same" }, .flags = FLAGS },
     { "async_depth", "Internal parallelization depth, the higher the value the higher the latency.", OFFSET(qsv.async_depth), AV_OPT_TYPE_INT, { .i64 = 4 }, 0, INT_MAX, .flags = FLAGS },
 #if QSV_ONEVPL

@@ -122,6 +122,9 @@ typedef struct QSVVPPParam {
     /* Crop information for each input, if needed */
     int num_crop;
     QSVVPPCrop *crop;
+
+    int crop_out_w;
+    int crop_out_h;
 } QSVVPPParam;
 
 /* create and initialize the QSV session */

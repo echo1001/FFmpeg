@@ -341,6 +341,8 @@ static int overlay_qsv_init(AVFilterContext *ctx)
     vpp->qsv_param.num_ext_buf   = 1;
     vpp->qsv_param.out_sw_format = AV_PIX_FMT_NV12;
     vpp->qsv_param.num_crop      = 0;
+    vpp->qsv_param.crop_out_w    = 0;
+    vpp->qsv_param.crop_out_h    = 0;
 
     return 0;
 }
