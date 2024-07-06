@@ -114,6 +114,10 @@ typedef struct RKRGAParam {
     int in_crop_w;
     int in_crop_h;
 
+    int out_crop;
+    int out_crop_w;
+    int out_crop_h;
+
     int overlay_x;
     int overlay_y;
 } RKRGAParam;

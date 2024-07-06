@@ -1010,6 +1010,18 @@ av_cold int ff_rkrga_init(AVFilterContext *avctx, RKRGAParam *param)
     if (ret < 0)
         goto fail;
 
+    
+    if (param->out_crop) {
+        /* The x/y/w/h of RGA YUV image needs to be 2 aligned */
+        if (!(r->out_rga_frame_info.pix_desc->flags & AV_PIX_FMT_FLAG_RGB)) {
+            param->out_crop_w = ALIGN_DOWN(param->out_crop_w, RK_RGA_YUV_ALIGN);
+            param->out_crop_h = ALIGN_DOWN(param->out_crop_h, RK_RGA_YUV_ALIGN);
+        }
+        r->out_rga_frame_info.crop = 1;
+        r->out_rga_frame_info.act_w = param->out_crop_w;
+        r->out_rga_frame_info.act_h = param->out_crop_h;
+    }
+
     /* Pre-check RGAFrameInfo */
     ret = verify_rga_frame_info(avctx, &r->in_rga_frame_infos[0],
                                 &r->out_rga_frame_info,

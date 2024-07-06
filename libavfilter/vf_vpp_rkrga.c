@@ -52,7 +52,12 @@ typedef struct RGAVppContext {
 
     char *ow, *oh;
     char *cx, *cy, *cw, *ch;
+    char *ocw, *och;
     int crop;
+
+    int out_crop;
+    int out_crop_width;
+    int out_crop_height;
 
     int act_x, act_y;
     int act_w, act_h;
@@ -84,6 +89,7 @@ static const char *const var_names[] = {
     "ch",
     "cx",
     "cy",
+    "ocw", "och",
     "a", "dar",
     "sar",
     NULL
@@ -98,6 +104,7 @@ enum var_name {
     VAR_CH,
     VAR_CX,
     VAR_CY,
+    VAR_OCW, VAR_OCH,
     VAR_A, VAR_DAR,
     VAR_SAR,
     VAR_VARS_NB
@@ -106,7 +113,8 @@ enum var_name {
 static av_cold int eval_expr(AVFilterContext *ctx,
                              int *ret_w, int *ret_h,
                              int *ret_cx, int *ret_cy,
-                             int *ret_cw, int *ret_ch)
+                             int *ret_cw, int *ret_ch,
+                             int *ret_ocw, int *ret_och)
 {
 #define PASS_EXPR(e, s) {\
     if (s) {\
@@ -128,6 +136,7 @@ static av_cold int eval_expr(AVFilterContext *ctx,
     AVExpr *w_expr  = NULL, *h_expr  = NULL;
     AVExpr *cw_expr = NULL, *ch_expr = NULL;
     AVExpr *cx_expr = NULL, *cy_expr = NULL;
+    AVExpr *ocw_expr = NULL, *och_expr = NULL;
     int     ret = 0;
 
     PASS_EXPR(cw_expr, r->cw);
@@ -138,6 +147,9 @@ static av_cold int eval_expr(AVFilterContext *ctx,
 
     PASS_EXPR(cx_expr, r->cx);
     PASS_EXPR(cy_expr, r->cy);
+
+    PASS_EXPR(ocw_expr, r->ocw);
+    PASS_EXPR(och_expr, r->och);
 
     var_values[VAR_IW] =
     var_values[VAR_IN_W] = ctx->inputs[0]->w;
@@ -175,7 +187,11 @@ static av_cold int eval_expr(AVFilterContext *ctx,
     /* calc again in case cx is relative to cy */
     CALC_EXPR(cx_expr, var_values[VAR_CX], *ret_cx, (var_values[VAR_IW] - var_values[VAR_OW]) / 2);
 
+    CALC_EXPR(ocw_expr, var_values[VAR_OCW], *ret_ocw, var_values[VAR_OUT_W]);
+    CALC_EXPR(och_expr, var_values[VAR_OCH], *ret_och, var_values[VAR_OUT_H]);
+
     r->crop = (*ret_cw != var_values[VAR_IW]) || (*ret_ch != var_values[VAR_IH]);
+    r->out_crop = (*ret_ocw != var_values[VAR_OUT_W]) || (*ret_och != var_values[VAR_OUT_H]);
 
 release:
     av_expr_free(w_expr);
@@ -184,6 +200,8 @@ release:
     av_expr_free(ch_expr);
     av_expr_free(cx_expr);
     av_expr_free(cy_expr);
+    av_expr_free(ocw_expr);
+    av_expr_free(och_expr);
 #undef PASS_EXPR
 #undef CALC_EXPR
 
@@ -203,7 +221,7 @@ static av_cold int set_size_info(AVFilterContext *ctx,
         return AVERROR(EINVAL);
     }
 
-    if ((ret = eval_expr(ctx, &w, &h, &r->act_x, &r->act_y, &r->act_w, &r->act_h)) < 0)
+    if ((ret = eval_expr(ctx, &w, &h, &r->act_x, &r->act_y, &r->act_w, &r->act_h, &r->out_crop_width, &r->out_crop_height)) < 0)
         return ret;
 
     r->act_x = FFMAX(FFMIN(r->act_x, inlink->w), 0);
@@ -375,6 +393,10 @@ static av_cold int rgavpp_config_props(AVFilterLink *outlink)
     param.in_crop_w      = r->act_w;
     param.in_crop_h      = r->act_h;
 
+    param.out_crop       = r->out_crop;
+    param.out_crop_w     = r->out_crop_width;
+    param.out_crop_h     = r->out_crop_height;
+
     ret = ff_rkrga_init(ctx, &param);
     if (ret < 0)
         return ret;
@@ -542,6 +564,10 @@ const AVFilter ff_vf_scale_rkrga = {
 static const AVOption rgavpp_options[] = {
     { "w",  "Output video width",                  OFFSET(ow), AV_OPT_TYPE_STRING, { .str = "cw" }, 0, 0, FLAGS },
     { "h",  "Output video height",                 OFFSET(oh), AV_OPT_TYPE_STRING, { .str = "w*ch/cw" }, 0, 0, FLAGS },
+
+    { "ocw",  "Output crop width",                  OFFSET(ocw), AV_OPT_TYPE_STRING, { .str = "w" }, 0, 0, FLAGS },
+    { "och",  "Output crop height",                 OFFSET(och), AV_OPT_TYPE_STRING, { .str = "h" }, 0, 0, FLAGS },
+
     { "cw", "Set the width crop area expression",  OFFSET(cw), AV_OPT_TYPE_STRING, { .str = "iw" }, 0, 0, FLAGS },
     { "ch", "Set the height crop area expression", OFFSET(ch), AV_OPT_TYPE_STRING, { .str = "ih" }, 0, 0, FLAGS },
     { "cx", "Set the x crop area expression",      OFFSET(cx), AV_OPT_TYPE_STRING, { .str = "(in_w-out_w)/2" }, 0, 0, FLAGS },
